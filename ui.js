@@ -16,6 +16,15 @@ $(async function () {
     const $navFavorites = $('#nav-favorites');
     const $navMyPosts = $('#nav-my-posts');
     const $navBar = $("#nav-loggedin");
+    const $profileHeader = $('#profile-header');
+    const $profileName = $('#profile-name');
+    const $profileUsername = $('#profile-username');
+    const $profileDate = $('#profile-account-date');
+    const $userProfile = $('#user-profile');
+    const $editAccountForm = $('#edit-account-form');
+    const $editAccountCancel = $('#edit-account-cancel');
+    const $editAccountName = $('#edit-account-name');
+    const $editAccountPassword = $('#edit-account-password');
 
     // global storyList variable
     let storyList = null;
@@ -33,16 +42,21 @@ $(async function () {
     $loginForm.on("submit", async function (evt) {
         evt.preventDefault(); // no page-refresh on submit
 
-        // grab the username and password
-        const username = $("#login-username").val();
-        const password = $("#login-password").val();
+        try {
+            // grab the username and password
+            const username = $("#login-username").val();
+            const password = $("#login-password").val();
 
-        // call the login static method to build a user instance
-        const userInstance = await User.login(username, password);
-        // set the global user to the user instance
-        currentUser = userInstance;
-        syncCurrentUserToLocalStorage();
-        loginAndSubmitForm();
+            // call the login static method to build a user instance
+            const userInstance = await User.login(username, password);
+            // set the global user to the user instance
+            currentUser = userInstance;
+            syncCurrentUserToLocalStorage();
+            loginAndSubmitForm();
+            fillUserInfo();
+        } catch {
+            alert('Incorrect username or password');
+        }
     });
 
     /**
@@ -53,16 +67,21 @@ $(async function () {
     $createAccountForm.on("submit", async function (evt) {
         evt.preventDefault(); // no page refresh
 
-        // grab the required fields
-        let name = $("#create-account-name").val();
-        let username = $("#create-account-username").val();
-        let password = $("#create-account-password").val();
+        try {
+            // grab the required fields
+            let name = $("#create-account-name").val();
+            let username = $("#create-account-username").val();
+            let password = $("#create-account-password").val();
 
-        // call the create method, which calls the API and then builds a new user instance
-        const newUser = await User.create(username, password, name);
-        currentUser = newUser;
-        syncCurrentUserToLocalStorage();
-        loginAndSubmitForm();
+            // call the create method, which calls the API and then builds a new user instance
+            const newUser = await User.create(username, password, name);
+            currentUser = newUser;
+            syncCurrentUserToLocalStorage();
+            loginAndSubmitForm();
+            fillUserInfo();
+        } catch {
+            alert('Username taken; please choose another');
+        }
     });
 
     /**
@@ -70,6 +89,7 @@ $(async function () {
      */
 
     $navLogOut.on("click", function () {
+        emptyUserInfo();
         // empty out local storage
         localStorage.clear();
         // refresh the page, clearing memory
@@ -91,7 +111,7 @@ $(async function () {
      * Event handler for Navigation to Homepage
      */
 
-    $("body").on("click", "#nav-all", async function () {
+    $("body").on("click", "#nav-all-brand", async function () {
         hideElements();
         await generateStories();
         $allStoriesList.show();
@@ -115,6 +135,7 @@ $(async function () {
 
         if (currentUser) {
             showNavForLoggedInUser();
+            fillUserInfo();
         }
     }
 
@@ -156,7 +177,7 @@ $(async function () {
      * A function to render HTML for an individual Story instance
      */
 
-    function generateStoryHTML(story) {
+    function generateStoryHTML(story, userAdded) {
         let hostName = getHostName(story.url);
         let checkbox = '';
 
@@ -165,15 +186,19 @@ $(async function () {
         // checkboxes will not appear if no user is logged in
         if (currentUser) {
             let checked = '';
+            let remove = '';
             if (currentUser.favorites.some(function (favorite) { return favorite.storyId === story.storyId; })) {
                 checked = ' checked';
             }
-            checkbox = `<small><input type="checkbox"${checked}>favorite</small>`;
+            if (currentUser.ownStories.some(function (ownStory) { return ownStory.storyId === story.storyId; }) || userAdded) {
+                remove = '&nbsp;|&nbsp;<span class="remove-button edit-remove-button">remove</span>';
+            }
+            checkbox = `<small><input type="checkbox"${checked}>favorite${remove}</small>`;
         }
 
         // render story markup
         const storyMarkup = $(`
-      <li id="${story.storyId}">
+      <li class="${story.storyId}">
         <a class="article-link" href="${story.url}" target="a_blank">
           <strong>${story.title}</strong>
         </a>
@@ -254,10 +279,10 @@ $(async function () {
         const response = await storyList.addStory(currentUser, newStory);
 
         // add the new story to the DOM and to currentUser.ownStories
-        const storyHTML = generateStoryHTML(response);
+        const storyHTML = generateStoryHTML(response, true);
+        currentUser.ownStories.push(response);
         $allStoriesList.prepend(storyHTML);
         $ownStories.prepend(storyHTML);
-        currentUser.ownStories.push(response);
 
         // clear input fields and hide form
         $author.val('');
@@ -286,7 +311,7 @@ $(async function () {
 
         // loop through all stories and generate HTML
         for (let story of stories) {
-            const result = generateStoryHTML(story);
+            const result = generateStoryHTML(story, false);
             order ? list.append(result) : list.prepend(result);
         }
     }
@@ -315,16 +340,78 @@ $(async function () {
         $ownStories.show();
     });
 
-    // event listener for favorite checkboxes
+    // event listener for favorite checkboxes and remove buttons
     $articlesContainer.on('click', async function (evt) {
-        const box = evt.target;
-        if (box.type === 'checkbox') {
-            const storyId = box.parentElement.parentElement.id;
-            if (box.checked) {
+        const clicked = evt.target;
+        const $listItem = $(clicked.parentElement.parentElement);
+        const storyId = $listItem.attr('class');
+        if (clicked.type === 'checkbox') {
+            if (clicked.checked) {
                 await currentUser.addFavorite(storyId);
             } else {
                 await currentUser.removeFavorite(storyId);
             }
+        } else if (clicked.classList.contains('remove-button')) {
+            $(`li[class="${storyId}"]`).remove();
+            await currentUser.removeFavorite(storyId);
+            await currentUser.deleteStory(storyId);
+            let index = storyLookup(storyId, currentUser.ownStories);
+            currentUser.ownStories.splice(index, 1);
+            index = storyLookup(storyId, storyList.stories);
+            storyList.stories.splice(index, 1);
         }
     });
+
+    function storyLookup(storyId, list) {
+        for (i = 0; i < list.length; i++) {
+            let story = list[i];
+            if (story.storyId === storyId) {
+                return i;
+            }
+        }
+    }
+
+    function fillUserInfo() {
+        $profileHeader.html('User Profile Info | <small id="edit-profile" class="edit-remove-button">edit</small>');
+        $profileName.html(`Name: <b>${currentUser.name}</b>`);
+        $profileUsername.html(`Username: <b>${currentUser.username}</b>`);
+        $profileDate.html(`Account Created: <b>${currentUser.createdAt.slice(0, 10)}</b>`);
+        $userProfile.show();
+    }
+
+    function emptyUserInfo() {
+        $profileHeader.html('User Profile Info');
+        $profileName.html('Name:');
+        $profileUsername.html('Username:');
+        $profileDate.html('Account Created:');
+        $userProfile.hide();
+    }
+
+    // event listener for edit profile button
+    $('#edit-profile').on('click', function () {
+        $allStoriesList.hide();
+        $favoritedArticles.hide();
+        $ownStories.hide();
+        $editAccountForm.show();
+        console.log('yeet');
+    })
+
+    // event listener for edit profile cancel button
+    $editAccountCancel.on('click', function () {
+        $editAccountForm.hide();
+        $allStoriesList.show();
+    })
+
+    // event listener for edit profile form submission
+    $editAccountForm.on('submit', async function (evt) {
+        evt.preventDefault();
+
+        const name = $editAccountName.val();
+        const password = $editAccountPassword.val();
+        await currentUser.update(name, password);
+        fillUserInfo();
+        $editAccountForm.trigger('reset');
+        $editAccountForm.hide();
+        $allStoriesList.show();
+    })
 });

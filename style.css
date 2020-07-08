@@ -226,3 +226,8 @@ form > hr {
     margin: 8px auto;
   }
 }
+
+.edit-remove-button:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}

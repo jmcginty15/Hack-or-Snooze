@@ -13,7 +13,7 @@
 
 <body>
     <nav>
-        <b><a class="nav-link navbar-brand" href="#">Hack or Snooze</a></b>
+        <b><a class="nav-link navbar-brand" id="nav-all-brand" href="#">Hack or Snooze</a></b>
         <a class="nav-link nav-right" href="#" id="nav-login">login/create user</a>
         <span class="nav-link nav-right hidden" id="nav-welcome">
             <a href="#" id="nav-user-profile"></a>
@@ -102,9 +102,22 @@
             </div>
             <button type="submit">create account</button>
         </form>
+        <form action="#" id="edit-account-form" class="account-form hidden" method="post">
+            <h4>Edit Account</h4>
+            <div class="login-input">
+                <label for="edit-account-name">new name</label>
+                <input id="edit-account-name" type="text">
+            </div>
+            <div class="login-input">
+                <label for="edit-account-password">new password</label>
+                <input id="edit-account-password" type="password">
+            </div>
+            <button type="submit">submit</button>
+            <button id="edit-account-cancel">cancel</button>
+        </form>
     </section>
     <section id="user-profile" class="container hidden">
-        <h4>User Profile Info</h4>
+        <h4 id="profile-header">User Profile Info</h4>
         <section>
             <div id="profile-name">Name:</div>
             <div id="profile-username">Username:</div>

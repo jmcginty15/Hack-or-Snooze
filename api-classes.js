@@ -161,15 +161,27 @@ class User {
     }
 
     async addFavorite(storyId) {
-        // this.favorites.push(story);
         const response = await axios.post(`${BASE_URL}/users/${this.username}/favorites/${storyId}`, { token: this.loginToken });
         this.favorites = response.data.user.favorites;
     }
 
     async removeFavorite(storyId) {
-        // this.favorites.splice(this.favorites.indexOf(story), 1);
         const response = await axios.delete(`${BASE_URL}/users/${this.username}/favorites/${storyId}`, { data: { token: this.loginToken } });
         this.favorites = response.data.user.favorites;
+    }
+
+    async deleteStory(storyId) {
+        await axios.delete(`${BASE_URL}/stories/${storyId}`, { data: { token: this.loginToken } });
+    }
+
+    async update(name, password) {
+        if (name) {
+            const response = await axios.patch(`${BASE_URL}/users/${this.username}`, { token: this.loginToken, user: { name: name } });
+            this.name = response.data.user.name;
+        }
+        if (password) {
+            await axios.patch(`${BASE_URL}/users/${this.username}`, { token: this.loginToken, user: { password: password } });
+        }
     }
 }
 
