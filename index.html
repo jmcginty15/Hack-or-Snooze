@@ -41,7 +41,7 @@
                 <label for="url">url</label>
                 <input id="url" required type="url" placeholder="article url">
             </div>
-            <button type="submit">submit</button><button id="new-post-cancel">cancel</button>
+            <button type="submit">submit</button><button type="button" id="new-post-cancel">cancel</button>
             <hr>
         </form>
         <article>
@@ -63,13 +63,22 @@
         </article>
     </section>
     <section class="edit-article-container container">
-        <form action="#" id="edit-article-form" class="hidden" method="post">
+        <form action="#" id="edit-article-form" class="account-form hidden" method="post">
             <h4>Article Information</h4>
             <div class="edit-input">
-                <label for="edit-title">Title</label>
-                <input id="edit-title" type="text">
-                <button type="submit">change</button>
+                <label for="edit-author">new author</label>
+                <input id="edit-author" type="text">
             </div>
+            <div class="edit-input">
+                <label for="edit-title">new title</label>
+                <input id="edit-title" type="text">
+            </div>
+            <div class="edit-input">
+                <label for="edit-url">new url</label>
+                <input id="edit-url" type="text">
+            </div>
+            <button type="submit">submit</button>
+            <button type="button" id="edit-article-cancel">cancel</button>
         </form>
     </section>
     <section class="account-forms-container container">
@@ -113,10 +122,10 @@
                 <input id="edit-account-password" type="password">
             </div>
             <button type="submit">submit</button>
-            <button id="edit-account-cancel">cancel</button>
+            <button type="button" id="edit-account-cancel">cancel</button>
         </form>
     </section>
-    <section id="user-profile" class="container hidden">
+    <section id="user-profile" class="hidden">
         <h4 id="profile-header">User Profile Info</h4>
         <section>
             <div id="profile-name">Name:</div>

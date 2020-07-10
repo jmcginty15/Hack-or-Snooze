@@ -25,12 +25,22 @@ $(async function () {
     const $editAccountCancel = $('#edit-account-cancel');
     const $editAccountName = $('#edit-account-name');
     const $editAccountPassword = $('#edit-account-password');
+    const $editArticleForm = $('#edit-article-form');
+    const $editArticleCancel = $('#edit-article-cancel');
+    const $editTitle = $('#edit-title');
+    const $editAuthor = $('#edit-author');
+    const $editUrl = $('#edit-url');
 
     // global storyList variable
     let storyList = null;
 
     // global currentUser variable
     let currentUser = null;
+
+    // these global variables will be used for article editing
+    // to identify the article to be edited and the page to show after the form is submitted
+    let $showList = null;
+    let $editArticle = null;
 
     await checkIfLoggedIn();
 
@@ -191,7 +201,7 @@ $(async function () {
                 checked = ' checked';
             }
             if (currentUser.ownStories.some(function (ownStory) { return ownStory.storyId === story.storyId; }) || userAdded) {
-                remove = '&nbsp;|&nbsp;<span class="remove-button edit-remove-button">remove</span>';
+                remove = '&nbsp;|&nbsp;<span class="edit-button edit-remove-button">edit</span>&nbsp;|&nbsp;<span class="remove-button edit-remove-button">remove</span>';
             }
             checkbox = `<small><input type="checkbox"${checked}>favorite${remove}</small>`;
         }
@@ -281,8 +291,11 @@ $(async function () {
         // add the new story to the DOM and to currentUser.ownStories
         const storyHTML = generateStoryHTML(response, true);
         currentUser.ownStories.push(response);
-        $allStoriesList.prepend(storyHTML);
-        $ownStories.prepend(storyHTML);
+        if (!$allStoriesList.hasClass('hidden')) {
+            $allStoriesList.prepend(storyHTML);
+        } else if (!$ownStories.hasClass('hidden')) {
+            $ownStories.prepend(storyHTML);
+        }
 
         // clear input fields and hide form
         $author.val('');
@@ -317,30 +330,45 @@ $(async function () {
     }
 
     // event listener for 'all' button
-    $navAllPosts.on('click', function () {
+    $navAllPosts.on('click', showAllStories);
+
+    function showAllStories() {
         $favoritedArticles.hide();
         $ownStories.hide();
+        $favoritedArticles.addClass('hidden');
+        $ownStories.addClass('hidden');
         generateHTML(storyList.stories, true, $allStoriesList);
         $allStoriesList.show();
-    });
+        $allStoriesList.removeClass('hidden');
+    }
 
     // event listener for 'favorites' button
-    $navFavorites.on('click', function () {
+    $navFavorites.on('click', showFavorites);
+
+    function showFavorites() {
         $allStoriesList.hide();
         $ownStories.hide();
+        $allStoriesList.addClass('hidden');
+        $ownStories.addClass('hidden');
         generateHTML(currentUser.favorites, false, $favoritedArticles);
         $favoritedArticles.show();
-    });
+        $favoritedArticles.removeClass('hidden');
+    }
 
     // event listener for 'my posts' button
-    $navMyPosts.on('click', function () {
+    $navMyPosts.on('click', showOwnStories);
+
+    function showOwnStories() {
         $allStoriesList.hide();
         $favoritedArticles.hide();
+        $allStoriesList.addClass('hidden');
+        $favoritedArticles.addClass('hidden');
         generateHTML(currentUser.ownStories, false, $ownStories);
         $ownStories.show();
-    });
+        $ownStories.removeClass('hidden');
+    }
 
-    // event listener for favorite checkboxes and remove buttons
+    // event listener for favorite checkboxes and edit and remove buttons
     $articlesContainer.on('click', async function (evt) {
         const clicked = evt.target;
         const $listItem = $(clicked.parentElement.parentElement);
@@ -359,6 +387,17 @@ $(async function () {
             currentUser.ownStories.splice(index, 1);
             index = storyLookup(storyId, storyList.stories);
             storyList.stories.splice(index, 1);
+        } else if (clicked.classList.contains('edit-button')) {
+            if (!$allStoriesList.hasClass('hidden')) {
+                $showList = $allStoriesList;
+            } else if (!$favoritedArticles.hasClass('hidden')) {
+                $showList = $favoritedArticles;
+            } else if (!$ownStories.hasClass('hidden')) {
+                $showList = $ownStories;
+            }
+            $editArticle = $(clicked).parent().parent();
+            $showList.hide();
+            $editArticleForm.show();
         }
     });
 
@@ -376,6 +415,7 @@ $(async function () {
         $profileName.html(`Name: <b>${currentUser.name}</b>`);
         $profileUsername.html(`Username: <b>${currentUser.username}</b>`);
         $profileDate.html(`Account Created: <b>${currentUser.createdAt.slice(0, 10)}</b>`);
+        $userProfile.addClass('container');
         $userProfile.show();
     }
 
@@ -384,11 +424,13 @@ $(async function () {
         $profileName.html('Name:');
         $profileUsername.html('Username:');
         $profileDate.html('Account Created:');
+        $userProfile.removeClass('container');
         $userProfile.hide();
     }
 
     // event listener for edit profile button
     $('#edit-profile').on('click', function () {
+        $('#user-profile').hide();
         $allStoriesList.hide();
         $favoritedArticles.hide();
         $ownStories.hide();
@@ -399,6 +441,9 @@ $(async function () {
     // event listener for edit profile cancel button
     $editAccountCancel.on('click', function () {
         $editAccountForm.hide();
+        $editAccountName.val('');
+        $editAccountPassword.val('');
+        $('#user-profile').show();
         $allStoriesList.show();
     })
 
@@ -413,5 +458,43 @@ $(async function () {
         $editAccountForm.trigger('reset');
         $editAccountForm.hide();
         $allStoriesList.show();
+        $('#user-profile').show();
+    })
+
+    // event listener for edit article cancel button
+    $editArticleCancel.on('click', function () {
+        $editArticleForm.hide();
+        $editAuthor.val('');
+        $editTitle.val('');
+        $editUrl.val('');
+        $showList.show();
+    })
+
+    // event listener for edit article form submission
+    $editArticleForm.on('submit', async function (evt) {
+        evt.preventDefault();
+
+        const editId = $editArticle.attr('class');
+        const newAuthor = $editAuthor.val();
+        const newTitle = $editTitle.val();
+        const newUrl = $editUrl.val();
+
+        const newStory = await currentUser.editStory(editId, newAuthor, newTitle, newUrl);
+        let index = storyLookup(editId, storyList.stories);
+        storyList.stories[index] = newStory;
+        index = storyLookup(editId, currentUser.favorites);
+        if (index) { currentUser.favorites[index] = newStory; }
+        index = storyLookup(editId, currentUser.ownStories);
+        currentUser.ownStories[index] = newStory;
+        
+        if ($showList === $allStoriesList) {
+            showAllStories();
+        } else if ($showList === $favoritedArticles) {
+            showFavorites();
+        } else if ($showList === $ownStories) {
+            showOwnStories();
+        }
+
+        $editArticleForm.hide();
     })
 });

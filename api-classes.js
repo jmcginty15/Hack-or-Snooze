@@ -174,6 +174,24 @@ class User {
         await axios.delete(`${BASE_URL}/stories/${storyId}`, { data: { token: this.loginToken } });
     }
 
+    async editStory(storyId, newAuthor, newTitle, newUrl) {
+        const newStory = {};
+        let response = null;
+
+        if (newAuthor) { newStory.author = newAuthor; }
+        if (newTitle) { newStory.title = newTitle; }
+        if (newUrl) { newStory.url = newUrl; }
+
+        try {
+            response = await axios.patch(`${BASE_URL}/stories/${storyId}`, { token: this.loginToken, story: newStory });
+        } catch {
+            alert('Please enter a valid URL, or leave the field blank');
+            return;
+        }
+
+        return response.data.story;
+    }
+
     async update(name, password) {
         if (name) {
             const response = await axios.patch(`${BASE_URL}/users/${this.username}`, { token: this.loginToken, user: { name: name } });
