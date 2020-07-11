@@ -429,13 +429,14 @@ $(async function () {
     }
 
     // event listener for edit profile button
-    $('#edit-profile').on('click', function () {
-        $('#user-profile').hide();
-        $allStoriesList.hide();
-        $favoritedArticles.hide();
-        $ownStories.hide();
-        $editAccountForm.show();
-        console.log('yeet');
+    $userProfile.on('click', function (evt) {
+        if (evt.target.id === 'edit-profile') {
+            $('#user-profile').hide();
+            $allStoriesList.hide();
+            $favoritedArticles.hide();
+            $ownStories.hide();
+            $editAccountForm.show();
+        }
     })
 
     // event listener for edit profile cancel button
@@ -486,7 +487,7 @@ $(async function () {
         if (index) { currentUser.favorites[index] = newStory; }
         index = storyLookup(editId, currentUser.ownStories);
         currentUser.ownStories[index] = newStory;
-        
+
         if ($showList === $allStoriesList) {
             showAllStories();
         } else if ($showList === $favoritedArticles) {
